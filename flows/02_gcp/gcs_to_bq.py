@@ -6,29 +6,33 @@ from prefect_gcp import GcpCredentials
 
 
 @task(retries=3)
-def extract_from_gcs(color:str,year:int,month:int) -> Path:
+def extract_from_gcs(color: str, year: int, month: int) -> Path:
     gcs_path = f"data/{color}/{color}_tripdata_{year}-{month:02}.parquet"
     gcs_block = GcsBucket.load("zoom-gcs")
-    gcs_block.get_directory(from_path=gcs_path,local_path=f"../data/")
+    gcs_block.get_directory(from_path=gcs_path, local_path=f"../data/")
     return Path(f"../data/{gcs_path}")
 
 
 @task()
 def transform(path: Path) -> pd.DataFrame:
-    df=pd.read_parquet(path)
-    print(f"pre: missing of passenger counts:{df['passenger_count'].isna().sum()}")
+    df = pd.read_parquet(path)
+    print(
+        f"pre: missing of passenger counts:{df['passenger_count'].isna().sum()}")
     df["passenger_count"].fillna(0, inplace=True)
-    print(f"post: missing passenger count: {df['passenger_count'].isna().sum()}")
+    print(
+        f"post: missing passenger count: {df['passenger_count'].isna().sum()}")
     return df
 
+
 @task()
-def write_bq(df: pd.DataFrame)-> None:
+def write_bq(df: pd.DataFrame) -> None:
     gcp_credentials_block = GcpCredentials.load("zoom-gcp-credits")
     df.to_gbq(destination_table="dezoomcamp.rides",
-        project_id="dtc-de-375706",        credentials=gcp_credentials_block.get_credentials_from_service_account(),
-        chunksize=500_000,
-        if_exists="append"
-)
+              project_id="dtc-de-375706",
+              credentials=gcp_credentials_block.get_credentials_from_service_account(),
+              chunksize=500_000,
+              if_exists="append"
+              )
 
 
 @flow()
