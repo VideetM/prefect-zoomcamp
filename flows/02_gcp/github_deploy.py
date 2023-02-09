@@ -1,15 +1,13 @@
-from web_to_gcs import etl_web_to_gcs
+
 from prefect.filesystems import GitHub
-from prefect.deployments import Deployment
 
+block = GitHub(
+    repository="https://github.com/VideetM/prefect-zoomcamp",
 
-git_block = GitHub.load("github")
-
-github_dep = Deployment.build_from_flow(
-    flow=etl_web_to_gcs,
-    name="github-flow",
-    infrastructure=git_block
 )
+block.get_directory("flows") # specify a subfolder of repo
+block.save("dev")
 
-if __name__ == "__main__":
-    github_dep.apply()
+
+# prefect deployment build flows/02_gcp/etl_web_to_gcs.py:etl_web_to_gcs --name github_deploy --tag dev -sb github/dev -a
+
